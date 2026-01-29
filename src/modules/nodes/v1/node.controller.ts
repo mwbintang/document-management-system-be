@@ -7,7 +7,7 @@ const service = new NodeService();
 export class NodeController {
   static async create(req: Request, res: Response, next: NextFunction) {
     try {
-      const node = await service.create(req.body);
+      const node = await service.create(req.body, req.file);
       res.status(httpStatus.CREATED).json(node);
     } catch (err) {
       next(err);
@@ -17,7 +17,7 @@ export class NodeController {
   static async update(req: Request, res: Response, next: NextFunction) {
     try {
       const id = Number(req.params.id);
-      const node = await service.update(id, req.body);
+      const node = await service.update(id, req.body, req.file);
       res.status(httpStatus.NO_CONTENT).json(node);
     } catch (err) {
       next(err);
@@ -65,6 +65,17 @@ export class NodeController {
       });
 
       res.status(httpStatus.OK).json(result);
+    } catch (err) {
+      next(err);
+    }
+  }
+
+   static async download(req: Request, res: Response, next: NextFunction) {
+    try {
+      const id = Number(req.params.id);
+      const filePath = await service.downloadPath(id);
+
+      res.download(filePath || "");
     } catch (err) {
       next(err);
     }
