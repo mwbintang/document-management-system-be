@@ -1,14 +1,8 @@
 import { pool } from "../db/connection";
+import { FindAllParams, PaginatedResult } from "../interfaces/nodes";
 import { NodeModel } from "../models/node.model";
 import { offsetHandler } from "../utils/pagination";
 import { RowDataPacket, ResultSetHeader } from "mysql2";
-
-interface FindAllParams {
-  parentId?: number | null;
-  search?: string;
-  page: number;
-  limit: number;
-}
 
 export class NodeRepository {
   async create(data: Partial<NodeModel>): Promise<NodeModel | null> {
@@ -81,70 +75,161 @@ export class NodeRepository {
   async findAll({
     parentId = null,
     search,
-    page,
-    limit,
-  }: FindAllParams): Promise<NodeModel[]> {
+    page = 1,
+    limit = 10,
+  }: FindAllParams): Promise<PaginatedResult<NodeModel>> {
     const offset = offsetHandler(page, limit);
 
+    // =========================
+    // SEARCH MODE
+    // =========================
     if (search) {
       const params: any[] = [];
+      const countParams: any[] = [];
 
       let parentCondition = "parent_id IS NULL";
       if (parentId !== null) {
         parentCondition = "parent_id = ?";
         params.push(parentId);
+        countParams.push(parentId);
       }
 
       params.push(`%${search}%`, limit, offset);
+      countParams.push(`%${search}%`);
 
-      const [rows] = await pool.query<RowDataPacket[] & NodeModel[]>(
-        `
-        WITH RECURSIVE descendants AS (
-          SELECT
-            id,
-            name,
-            parent_id,
-            id AS top_id
-          FROM nodes
-          WHERE ${parentCondition}
+      const dataQuery = pool.query<RowDataPacket[] & NodeModel[]>(
+        `WITH RECURSIVE descendants AS (
+    SELECT
+      id,
+      name,
+      parent_id,
+      id AS top_id
+    FROM nodes
+    WHERE ${parentCondition}
 
-          UNION ALL
+    UNION ALL
 
-          SELECT
-            n.id,
-            n.name,
-            n.parent_id,
-            d.top_id
-          FROM nodes n
-          INNER JOIN descendants d ON n.parent_id = d.id
-        )
-        SELECT DISTINCT n.*
-        FROM descendants d
-        INNER JOIN nodes n ON n.id = d.top_id
-        WHERE d.name LIKE ?
-        ORDER BY n.created_at DESC
-        LIMIT ? OFFSET ?
-        `,
+    SELECT
+      n.id,
+      n.name,
+      n.parent_id,
+      d.top_id
+    FROM nodes n
+    INNER JOIN descendants d ON n.parent_id = d.id
+  )
+  SELECT DISTINCT
+    n.id,
+    n.name,
+    n.type,
+    n.size,
+    n.created_at,
+    u.username
+  FROM descendants d
+  INNER JOIN nodes n ON n.id = d.top_id
+  LEFT JOIN users u ON u.id = n.created_by
+  WHERE d.name LIKE ?
+  ORDER BY n.created_at DESC
+  LIMIT ? OFFSET ?
+  `,
         params
       );
 
-      return rows;
+      const countQuery = pool.query<RowDataPacket[]>(
+        `
+      WITH RECURSIVE descendants AS (
+        SELECT
+          id,
+          name,
+          parent_id,
+          id AS top_id
+        FROM nodes
+        WHERE ${parentCondition}
+
+        UNION ALL
+
+        SELECT
+          n.id,
+          n.name,
+          n.parent_id,
+          d.top_id
+        FROM nodes n
+        INNER JOIN descendants d ON n.parent_id = d.id
+      )
+      SELECT COUNT(DISTINCT top_id) AS total
+      FROM descendants
+      WHERE name LIKE ?
+      `,
+        countParams
+      );
+
+      const [[rows], [[{ total }]]] = await Promise.all([
+        dataQuery,
+        countQuery,
+      ]);
+
+      return {
+        data: rows,
+        meta: {
+          page,
+          limit,
+          total,
+          totalPages: Math.ceil(total / limit),
+        },
+      };
     }
 
-    // Normal fetch (no search)
-    const [rows] = await pool.query<RowDataPacket[] & NodeModel[]>(
+    // =========================
+    // NORMAL MODE (NO SEARCH)
+    // =========================
+    const dataQuery = pool.query<RowDataPacket[] & NodeModel[]>(
       `
-      SELECT *
-      FROM nodes
-      WHERE parent_id ${parentId === null ? "IS NULL" : "= ?"}
-      ORDER BY created_at DESC
-      LIMIT ? OFFSET ?
-      `,
+  SELECT
+    n.id,
+    n.name,
+    n.type,
+    n.size,
+    n.created_at,
+    u.username
+  FROM nodes n
+  LEFT JOIN users u ON u.id = n.created_by
+  WHERE n.parent_id ${parentId === null ? "IS NULL" : "= ?"}
+  ORDER BY n.created_at DESC
+  LIMIT ? OFFSET ?
+  `,
       parentId === null
         ? [limit, offset]
         : [parentId, limit, offset]
     );
 
-    return rows;
+    const countQuery = pool.query<RowDataPacket[]>(
+      `
+    SELECT COUNT(*) AS total
+    FROM nodes
+    WHERE parent_id ${parentId === null ? "IS NULL" : "= ?"}
+    `,
+      parentId === null ? [] : [parentId]
+    );
+
+    const [[rows], [[{ total }]]] = await Promise.all([
+      dataQuery,
+      countQuery,
+    ]);
+
+    return {
+      data: rows,
+      meta: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
+  }
+
+  async deleteOne(id: number): Promise<void> {
+    await pool.query(
+      `DELETE FROM nodes WHERE id = ?`,
+      [id]
+    );
   }
 }

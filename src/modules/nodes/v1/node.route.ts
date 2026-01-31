@@ -10,5 +10,6 @@ router.get("/:id/download", NodeController.download);
 router.post("/", upload.single("file"), NodeController.create);
 router.put("/:id", upload.single("file"), NodeController.update);
 router.delete("/", NodeController.deleteMany);
+router.delete("/:id", NodeController.deleteOne);
 
 export default router;

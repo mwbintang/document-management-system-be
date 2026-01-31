@@ -127,4 +127,14 @@ export class NodeService {
 
     return node.path;
   }
+
+  async deleteOne(id: number) {
+    const node = await this.repo.findById(id);
+
+    if (!node) {
+      throw new AppError("Node not found", httpStatus.NOT_FOUND);
+    };
+
+    await this.repo.deleteOne(id);
+  }
 }

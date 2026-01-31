@@ -54,8 +54,8 @@ export class NodeController {
         req.query.parentId === undefined
           ? undefined
           : req.query.parentId === "null"
-          ? null
-          : Number(req.query.parentId);
+            ? null
+            : Number(req.query.parentId);
 
       const result = await service.findAll({
         page,
@@ -76,6 +76,16 @@ export class NodeController {
       const filePath = await service.downloadPath(id);
 
       res.download(filePath || "");
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  static async deleteOne(req: Request, res: Response, next: NextFunction) {
+    try {
+      const id = Number(req.params.id);
+      await service.deleteOne(id);
+      res.status(httpStatus.NO_CONTENT).send();
     } catch (err) {
       next(err);
     }
