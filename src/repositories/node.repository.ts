@@ -77,6 +77,8 @@ export class NodeRepository {
     search,
     page = 1,
     limit = 10,
+    orderBy = "created_at",
+    orderDirection = "DESC",
   }: FindAllParams): Promise<PaginatedResult<NodeModel>> {
     const offset = offsetHandler(page, limit);
 
@@ -128,7 +130,7 @@ export class NodeRepository {
   INNER JOIN nodes n ON n.id = d.top_id
   LEFT JOIN users u ON u.id = n.created_by
   WHERE d.name LIKE ?
-  ORDER BY n.created_at DESC
+  ORDER BY n.${orderBy} ${orderDirection}
   LIMIT ? OFFSET ?
   `,
         params
@@ -193,7 +195,7 @@ export class NodeRepository {
   FROM nodes n
   LEFT JOIN users u ON u.id = n.created_by
   WHERE n.parent_id ${parentId === null ? "IS NULL" : "= ?"}
-  ORDER BY n.created_at DESC
+  ORDER BY n.${orderBy} ${orderDirection}
   LIMIT ? OFFSET ?
   `,
       parentId === null

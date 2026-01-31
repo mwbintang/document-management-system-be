@@ -15,4 +15,11 @@ export interface FindAllParams {
   search?: string;
   page: number;
   limit: number;
+  orderBy?: 
+  | "id"
+  | "name"
+  | "type"
+  | "size"
+  | "created_at";
+  orderDirection?: "ASC" | "DESC";
 }

@@ -104,13 +104,27 @@ export class NodeService {
     return node;
   }
 
-  async findAll(params: {
+  async findAll({
+    page,
+    limit,
+    search,
+    parentId,
+    orderBy = "created_at",
+    orderDirection = "DESC",
+  }: {
     page: number;
     limit: number;
     search?: string;
     parentId?: number | null;
+    orderBy?:
+    | "id"
+    | "name"
+    | "type"
+    | "size"
+    | "created_at"
+    orderDirection?: "ASC" | "DESC";
   }) {
-    return this.repo.findAll(params);
+    return this.repo.findAll({ page, limit, search, parentId, orderBy, orderDirection });
   };
 
   async downloadPath(id: number) {
