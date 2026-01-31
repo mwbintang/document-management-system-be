@@ -22,7 +22,7 @@ export class NodeService {
     }
   }
 
-  async _generateUpdatePayload(
+  async _normalizePayload(
     existingNode: NodeModel | undefined,
     data: Partial<NodeModel>,
     file?: Express.Multer.File
@@ -71,7 +71,7 @@ export class NodeService {
   }
 
   async create(data: Partial<NodeModel>, file?: Express.Multer.File) {
-    const payload = await this._generateUpdatePayload(undefined, data, file);
+    const payload = await this._normalizePayload(undefined, data, file);
 
     return this.repo.create(payload);
   }
@@ -82,7 +82,7 @@ export class NodeService {
       throw new AppError("Node not found", httpStatus.NOT_FOUND);
     };
 
-    const payload = await this._generateUpdatePayload(node, data, file);
+    const payload = await this._normalizePayload(node, data, file);
 
     return this.repo.update(id, payload);
   }
