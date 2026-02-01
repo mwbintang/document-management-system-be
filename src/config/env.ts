@@ -11,6 +11,7 @@ function required(name: string): string {
 export const env = {
     nodeEnv: process.env.NODE_ENV || "development",
     port: Number(process.env.PORT || 3000),
+    serverUrl: required("SERVER_URL"),
     db: {
         host: required("DB_HOST"),
         port: Number(process.env.DB_PORT || 3306),

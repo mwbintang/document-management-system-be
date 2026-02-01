@@ -2,6 +2,8 @@ import express, { Request, Response } from "express";
 import apiRoutes from "./index.routes";
 import { errorHandler } from "./middlewares/errorHandler";
 import cors from "cors";
+import swaggerUi from "swagger-ui-express";
+import { swaggerSpec } from "./config/swagger";
 
 export const app = express();
 
@@ -28,6 +30,12 @@ app.get("/health", (_req: Request, res: Response) => {
     timestamp: new Date().toISOString(),
   });
 });
+
+app.use(
+  "/docs",
+  swaggerUi.serve,
+  swaggerUi.setup(swaggerSpec)
+);
 
 /**
  * API routes
