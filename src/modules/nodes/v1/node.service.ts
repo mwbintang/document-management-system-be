@@ -108,7 +108,7 @@ export class NodeService {
     page,
     limit,
     search,
-    parentId,
+    parentId = null,
     orderBy = "created_at",
     orderDirection = "DESC",
   }: {

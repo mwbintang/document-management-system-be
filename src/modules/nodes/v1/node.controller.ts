@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import { NodeService } from "./node.service";
 import httpStatus from "http-status";
+import { ORDER_BY_FIELDS, ORDER_DIRECTION_FIELDS, OrderBy, OrderDirection } from "../../../interfaces/nodes";
 
 const service = new NodeService();
 
@@ -49,19 +50,29 @@ export class NodeController {
       const page = Number(req.query.page || 1);
       const limit = Number(req.query.limit || 10);
       const search = req.query.search as string | undefined;
+      const parentId = req.query.parentId ? Number(req.query.parentId) : null;
+      const rawOrderBy = req.query.orderBy;
 
-      const parentId =
-        req.query.parentId === undefined
-          ? undefined
-          : req.query.parentId === "null"
-            ? null
-            : Number(req.query.parentId);
+      const orderBy: OrderBy =
+        typeof rawOrderBy === "string" &&
+          ORDER_BY_FIELDS.includes(rawOrderBy as OrderBy)
+          ? (rawOrderBy as OrderBy)
+          : "created_at";
+
+      const rawOrderDirection = req.query.orderDirection;
+      const orderDirection: OrderDirection =
+        typeof rawOrderDirection === "string" &&
+          ORDER_DIRECTION_FIELDS.includes(rawOrderDirection as OrderDirection)
+          ? (rawOrderDirection as OrderDirection)
+          : "DESC";
 
       const result = await service.findAll({
         page,
         limit,
         search,
         parentId,
+        orderBy,
+        orderDirection
       });
 
       res.status(httpStatus.OK).json(result);
@@ -70,7 +81,7 @@ export class NodeController {
     }
   }
 
-   static async download(req: Request, res: Response, next: NextFunction) {
+  static async download(req: Request, res: Response, next: NextFunction) {
     try {
       const id = Number(req.params.id);
       const filePath = await service.downloadPath(id);
